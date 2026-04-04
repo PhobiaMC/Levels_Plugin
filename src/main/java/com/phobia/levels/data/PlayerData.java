@@ -5,6 +5,7 @@ import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
+import com.phobia.levels.LevelPlugin;
 import com.phobia.levels.api.PlayerLevelUpEvent;
 
 public class PlayerData {
@@ -16,7 +17,8 @@ public class PlayerData {
     private int kills;
     private int mobKills;
     private int deaths;
-    private int tokens;
+    private int tokens; // This is now "Pocket Cash"
+    private int bankBalance; // NEW: Bank balance
 
     public PlayerData(Player player) {
         this.player = player;
@@ -27,6 +29,7 @@ public class PlayerData {
         this.mobKills = 0;
         this.deaths = 0;
         this.tokens = 0;
+        this.bankBalance = 0;
     }
 
     private int calculateRequiredXp(int currentLevel) {
@@ -40,7 +43,9 @@ public class PlayerData {
         this.level = 1;
         this.xp = 0;
         this.requiredXp = calculateRequiredXp(1);
-        player.sendMessage("§c§lRESET! §7An administrator has reset your levels and XP.");
+        this.tokens = 0;
+        this.bankBalance = 0;
+        player.sendMessage("§c§lRESET! §7An administrator has reset your levels, XP, and bank account.");
     }
 
     public Player getPlayer() { return player; }
@@ -53,6 +58,7 @@ public class PlayerData {
         this.mobKills = config.getInt("mobKills", 0);
         this.deaths = config.getInt("deaths", 0);
         this.tokens = config.getInt("tokens", 0);
+        this.bankBalance = config.getInt("bankBalance", 0); // NEW: Load bank data
     }
 
     public void save(FileConfiguration config) {
@@ -63,6 +69,28 @@ public class PlayerData {
         config.set("mobKills", mobKills);
         config.set("deaths", deaths);
         config.set("tokens", tokens);
+        config.set("bankBalance", bankBalance); // NEW: Save bank data
+    }
+
+    // --- NEW: Banking Logic ---
+    public int getBankBalance() { return bankBalance; }
+
+    public boolean deposit(int amount) {
+        if (tokens >= amount) {
+            tokens -= amount;
+            bankBalance += amount;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean withdraw(int amount) {
+        if (bankBalance >= amount) {
+            bankBalance -= amount;
+            tokens += amount;
+            return true;
+        }
+        return false;
     }
 
     public int getLevel() { return level; }
@@ -114,6 +142,8 @@ public class PlayerData {
     }
 
     private void checkLevelUp() {
+        FileConfiguration config = LevelPlugin.getInstance().getConfig();
+        
         while (xp >= requiredXp) {
             xp -= requiredXp;
             level++;
@@ -121,10 +151,29 @@ public class PlayerData {
 
             Bukkit.getPluginManager().callEvent(new PlayerLevelUpEvent(player, level));
 
-            this.tokens += 25;
-            player.sendMessage("§a§lLEVEL UP! §7You are now level §b§l" + level + "§7!");
+            String path = "level-up.custom." + level;
+            String message;
+            int tokenReward;
+
+            if (config.contains(path)) {
+                message = config.getString(path + ".message");
+                tokenReward = config.getInt(path + ".tokens", 25);
+                
+                if (config.contains(path + ".commands")) {
+                    for (String cmd : config.getStringList(path + ".commands")) {
+                        String formattedCmd = cmd.replace("%player%", player.getName()).replace("%level%", String.valueOf(level));
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), formattedCmd);
+                    }
+                }
+            } else {
+                message = config.getString("level-up.default-message", "§a§lLEVEL UP! §7You are now level §b§l%level%§7!");
+                tokenReward = config.getInt("level-up.default-tokens", 25);
+            }
+
+            this.tokens += tokenReward;
+            player.sendMessage(message.replace("%level%", String.valueOf(level)).replace("&", "§"));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
-            player.sendMessage("§eYou received §625 tokens§e!");
+            player.sendMessage("§eYou received §6" + tokenReward + " tokens§e!");
         }
     }
 }

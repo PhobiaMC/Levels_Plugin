@@ -1,5 +1,8 @@
 package com.phobia.levels;
 
+import java.text.NumberFormat;
+import java.util.Locale;
+
 import org.bukkit.entity.Player;
 
 import com.phobia.levels.data.PlayerData;
@@ -17,53 +20,62 @@ public class LevelsAPI {
         return (data != null) ? data.getLevel() : 1;
     }
 
-    // =========================================================
-    // >>> CORRECTED TOKEN METHODS FOR CROSS-PLUGIN ACCESS
-    // =========================================================
-
-    /**
-     * Checks if the player has at least the specified amount of tokens.
-     * Delegates to PlayerData.getTokens().
-     * * @param p The player to check.
-     * @param amount The required amount of tokens.
-     * @return True if the player has enough tokens, false otherwise.
-     */
-    public static boolean hasTokens(Player p, int amount) {
-        LevelPlugin levelPlugin = LevelPlugin.getInstance();
-        if (levelPlugin == null) return false;
-
-        PlayerData data = levelPlugin.getPlayerDataManager().getData(p);
-        if (data == null) return false;
-        
-        return data.getTokens() >= amount;
+    // Helper for formatting numbers with commas (e.g., 1,000)
+    public static String format(int amount) {
+        return NumberFormat.getNumberInstance(Locale.US).format(amount);
     }
 
-    /**
-     * Deducts the specified amount of tokens from the player.
-     * Delegates to PlayerData.removeTokens(), which handles the subtraction.
-     * * @param p The player to deduct from.
-     * @param amount The amount of tokens to take.
-     * @return True if the deduction was successful, false if the player lacked tokens.
-     */
-    public static boolean takeTokens(Player p, int amount) {
-        LevelPlugin levelPlugin = LevelPlugin.getInstance();
-        if (levelPlugin == null) return false;
+    // =========================================================
+    // >>> TOKEN & BANK METHODS FOR CROSS-PLUGIN ACCESS
+    // =========================================================
 
-        PlayerData data = levelPlugin.getPlayerDataManager().getData(p);
+    public static int getTokens(Player p) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        return (data != null) ? data.getTokens() : 0;
+    }
+
+    public static int getBankBalance(Player p) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        return (data != null) ? data.getBankBalance() : 0;
+    }
+
+    public static boolean hasTokens(Player p, int amount) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        return data != null && data.getTokens() >= amount;
+    }
+
+    public static void addTokens(Player p, int amount) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        if (data != null) {
+            data.addTokens(amount);
+            LevelPlugin.getInstance().getPlayerDataManager().save(p);
+        }
+    }
+
+    public static boolean takeTokens(Player p, int amount) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
         if (data == null) return false;
 
-        // PlayerData.removeTokens(int) already handles the check and subtraction.
         boolean success = data.removeTokens(amount);
-        
-        // Since PlayerData was modified, we should force a save to prevent loss if the server crashes.
-        // We assume PlayerDataManager.saveData(p) or similar exists. 
-        // If not, the saving will rely on PlayerQuitListener/onDisable, which is less safe.
-        // For robustness, we should call a save function here if available.
-        // Assuming PlayerDataManager handles saving when PlayerData is modified or via an explicit call:
-        // levelPlugin.getPlayerDataManager().saveData(p); 
-        
+        if (success) LevelPlugin.getInstance().getPlayerDataManager().save(p);
         return success;
     }
-    
-    // =========================================================
+
+    public static boolean deposit(Player p, int amount) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        if (data == null) return false;
+
+        boolean success = data.deposit(amount);
+        if (success) LevelPlugin.getInstance().getPlayerDataManager().save(p);
+        return success;
+    }
+
+    public static boolean withdraw(Player p, int amount) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        if (data == null) return false;
+
+        boolean success = data.withdraw(amount);
+        if (success) LevelPlugin.getInstance().getPlayerDataManager().save(p);
+        return success;
+    }
 }

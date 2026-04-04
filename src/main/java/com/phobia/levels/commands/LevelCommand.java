@@ -16,6 +16,18 @@ public class LevelCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
+        // --- Logic: Reload Command ---
+        if (args.length >= 1 && args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("levels.admin")) {
+                sender.sendMessage(ChatColor.RED + "You do not have permission to reload the config.");
+                return true;
+            }
+
+            LevelPlugin.getInstance().reloadConfig();
+            sender.sendMessage(ChatColor.GREEN + "Levels configuration reloaded successfully!");
+            return true;
+        }
+
         // --- Logic: Admin Reset Command ---
         if (args.length >= 2 && args[0].equalsIgnoreCase("reset")) {
             if (!sender.hasPermission("levels.admin")) {
@@ -64,7 +76,7 @@ public class LevelCommand implements CommandExecutor {
 
         // --- Logic: Standard Level Check ---
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Usage: /level reset <player>");
+            sender.sendMessage(ChatColor.RED + "Usage: /level <reset|reload> [player]");
             return true;
         }
 

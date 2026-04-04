@@ -15,3 +15,51 @@ xp:
     creeper: 10
 
 leveledmobs-xp-enabled: true
+
+# --- NEW SECTION: Level Up Rewards & Messages ---
+level-up:
+  # The default message if a specific level isn't defined below
+  default-message: "§a§lLEVEL UP! §7You are now level §b§l%level%§7!"
+  default-tokens: 25
+  
+  # Custom rewards for specific milestones
+  custom:
+    '10':
+      message: "§6§lMILESTONE! §7You can now find §fTIER 2 guns §7in chests!"
+      tokens: 50
+      commands:
+        - ""
+    '15':
+      message: "§6§lMILESTONE! §eYou can now find §fIron Armor §ein chests!"
+      tokens: 100
+      commands:
+        - ""
+        - ""
+    '25':
+      message: "§6§lMILESTONE! §7You can now find §6TIER 3 guns §7in chests!"
+      tokens: 250
+      commands:
+        - ""
+        - ""
+    '30':
+      message: "§6§lMILESTONE! §7You can now find §bDiamond Armor §7in chests!"
+      tokens: 500
+      commands:
+        - ""
+        - ""
+    '50':
+      message: "§6§lMILESTONE! §7You can now find §fTIER 3 guns §7& §8Netherite Armor §7in chests!"
+      tokens: 2000
+      commands:
+        - ""
+        - "bc %player% §7has reached §a§llevel 50§7!"
+    '80':
+      message: "§6§lMILESTONE! §7You can now find §bTIER 4 guns §7in chests!"
+      tokens: 3000
+      commands:
+        - ""
+    '100':
+      message: "§6§lMILESTONE! §7You can now find §8TIER 5 guns §7in chests!"
+      tokens: 2000
+      commands:
+        - "bc %player% §7has reached §a§llevel 100§7!"

@@ -41,7 +41,7 @@ public class PlayerBoard {
         createLine("mobkills", ChatColor.AQUA.toString(), 12);
         createLine("deaths", ChatColor.DARK_AQUA.toString(), 11);
         createLine("kdr", ChatColor.DARK_RED.toString(), 10);
-        createLine("tokens", ChatColor.DARK_PURPLE.toString(), 9);
+        createLine("pocket", ChatColor.DARK_PURPLE.toString(), 9);
         createLine("online", ChatColor.GOLD.toString(), 8);
         
         objective.getScore(ChatColor.RESET.toString()).setScore(7);
@@ -76,7 +76,7 @@ public class PlayerBoard {
         String kdrFormatted = String.format("%.2f", data.getKdr());
         updateTeamText("kdr", ChatColor.WHITE + "KDR: " + ChatColor.GOLD + kdrFormatted);
         
-        updateTeamText("tokens", ChatColor.WHITE + "Tokens: " + ChatColor.YELLOW + data.getTokens());
+        updateTeamText("pocket", ChatColor.WHITE + "Pocket: " + ChatColor.YELLOW + data.getTokens());
         updateTeamText("online", ChatColor.WHITE + "Online: " + ChatColor.GREEN + Bukkit.getOnlinePlayers().size());
         
         updateTeamText("pboost", ChatColor.WHITE + "Your Boost: " + ChatColor.AQUA + "x" + playerMult);

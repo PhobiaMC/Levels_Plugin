@@ -80,8 +80,10 @@ public class ProfileCommand implements CommandExecutor {
         viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "KDR: " + ChatColor.GOLD + pKDR 
             + ChatColor.DARK_GRAY + " | " + ChatColor.GRAY + "TKDR: " + ChatColor.GOLD + tKDR);
         
-        // Economy Section
-        viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "Tokens: " + ChatColor.YELLOW + data.getTokens() + "⛁");
+        // Economy Section (Updated for Banking)
+        viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "Pocket: " + ChatColor.YELLOW + data.getTokens() + "⛁"
+            + ChatColor.DARK_GRAY + " | " + ChatColor.GRAY + "Bank: " + ChatColor.GOLD + data.getBankBalance() + "⛁");
+        
         viewer.sendMessage("");
     }
 }

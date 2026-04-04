@@ -10,6 +10,7 @@ import com.phobia.levels.commands.GiveXpCommand;
 import com.phobia.levels.commands.LevelCommand;
 import com.phobia.levels.commands.ProfileCommand;
 import com.phobia.levels.commands.XpBoostCommand;
+import com.phobia.levels.listeners.DeathListener;
 import com.phobia.levels.listeners.KillListener;
 import com.phobia.levels.listeners.PlayerJoinListener;
 import com.phobia.levels.listeners.PlayerQuitListener;
@@ -25,10 +26,8 @@ public class LevelPlugin extends JavaPlugin {
     private LevelManager levelManager;
     private ScoreboardHandler scoreboardHandler;
 
-    // ---------- XP BOOSTER ----------
     private double globalXpBoost = 1.0;
     private long boostExpireTime = 0;
-    // --------------------------------
 
     @Override
     public void onEnable() {
@@ -36,36 +35,27 @@ public class LevelPlugin extends JavaPlugin {
 
         saveDefaultConfig();
 
-        // Managers
         this.playerDataManager = new PlayerDataManager();
         this.levelManager = new LevelManager();
         this.scoreboardHandler = new ScoreboardHandler();
 
-        // Ensure playerdata folder exists
         File dataFolder = new File(getDataFolder(), "playerdata");
         if (!dataFolder.exists()) dataFolder.mkdirs();
 
-        // Listeners
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(), this);
         Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(), this);
         Bukkit.getPluginManager().registerEvents(new KillListener(), this);
-        //getServer().getPluginManager().registerEvents(new DeathListener(), this);
 
-
-        // ❌ REMOVE THIS — this was causing double XP
-        // Bukkit.getPluginManager().registerEvents(new XPListener(), this);
-
-        // Commands
         getCommand("level").setExecutor(new LevelCommand());
         getCommand("profile").setExecutor(new ProfileCommand());
         getCommand("givetokens").setExecutor(new GiveTokensCommand());
         getCommand("givexp").setExecutor(new GiveXpCommand());
         getCommand("xpboost").setExecutor(new XpBoostCommand());
 
-        // Start scoreboard updates
         this.scoreboardHandler.start();
 
-        // Boost timer task
+        Bukkit.getPluginManager().registerEvents(new DeathListener(), this);
+
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             if (boostExpireTime != 0 && System.currentTimeMillis() > boostExpireTime) {
                 globalXpBoost = 1.0;
@@ -99,10 +89,6 @@ public class LevelPlugin extends JavaPlugin {
     public ScoreboardHandler getScoreboardHandler() {
         return scoreboardHandler;
     }
-
-    // ============================
-    // XP MULTIPLIER FUNCTIONS
-    // ============================
 
     public double getPlayerMultiplier(org.bukkit.entity.Player p) {
         double highest = 1.0;
