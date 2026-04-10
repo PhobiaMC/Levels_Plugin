@@ -131,16 +131,16 @@ public class KillListener implements Listener {
         return null;
     }
 
-    @EventHandler
+    // CHANGED: Set priority to LOWEST so DeathListener processes first
+    // This prevents duplicate death counting since DeathListener handles it
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerKill(PlayerDeathEvent event) {
         Player victim = event.getEntity();
         Player killer = victim.getKiller();
 
-        PlayerData victimData = LevelPlugin.getInstance().getPlayerDataManager().getData(victim);
-        victimData.addDeath();
-        updateBoard(victim);
-        LevelPlugin.getInstance().getPlayerDataManager().save(victim);
-
+        // REMOVED: Death tracking moved to DeathListener to prevent duplicates
+        // Only handle kill rewards here
+        
         if (killer == null) return;
 
         // FIXED: Now correctly passes 'true' for a player kill
