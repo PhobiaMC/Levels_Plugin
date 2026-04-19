@@ -5,10 +5,12 @@ import java.io.File;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.phobia.levels.commands.BalanceTopCommand;
 import com.phobia.levels.commands.GiveTokensCommand;
 import com.phobia.levels.commands.GiveXpCommand;
 import com.phobia.levels.commands.LevelCommand;
 import com.phobia.levels.commands.ProfileCommand;
+import com.phobia.levels.commands.TokenAdminCommand;
 import com.phobia.levels.commands.XpBoostCommand;
 import com.phobia.levels.listeners.DeathListener;
 import com.phobia.levels.listeners.KillListener;
@@ -38,6 +40,7 @@ public class LevelPlugin extends JavaPlugin {
         this.playerDataManager = new PlayerDataManager();
         this.levelManager = new LevelManager();
         this.scoreboardHandler = new ScoreboardHandler();
+        BalanceTopCommand balTop = new BalanceTopCommand();
 
         File dataFolder = new File(getDataFolder(), "playerdata");
         if (!dataFolder.exists()) dataFolder.mkdirs();
@@ -51,6 +54,9 @@ public class LevelPlugin extends JavaPlugin {
         getCommand("givetokens").setExecutor(new GiveTokensCommand());
         getCommand("givexp").setExecutor(new GiveXpCommand());
         getCommand("xpboost").setExecutor(new XpBoostCommand());
+        getCommand("tokenadmin").setExecutor(new TokenAdminCommand());
+        getCommand("baltop").setExecutor(balTop);
+        getCommand("banktop").setExecutor(balTop);
 
         this.scoreboardHandler.start();
 

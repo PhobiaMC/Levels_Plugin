@@ -21,6 +21,17 @@ commands:
     description: Manage or view the global XP booster.
     usage: /xpboost
     permission: levels.xpboost.view
+  tokenadmin:
+    description: Administer tokens for players.
+    usage: /tokenadmin
+    permission: levels.admin
+  baltop:
+    description: View top pocket balances.
+    aliases: [topbal]
+  banktop:
+    description: View top bank balances.
+    aliases: [topbank]
+
 permissions:
   levels.multiplier.1:
     description: Gives the player a 1x XP multiplier

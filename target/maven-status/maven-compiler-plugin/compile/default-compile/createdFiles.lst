@@ -4,6 +4,7 @@ com\phobia\levels\commands\GiveXpCommand.class
 com\phobia\levels\data\PlayerData.class
 com\phobia\levels\scoreboard\ScoreboardHandler.class
 com\phobia\levels\scoreboard\PlayerBoard.class
+com\phobia\levels\commands\TokenAdminCommand.class
 com\phobia\levels\commands\LevelCommand.class
 com\phobia\levels\listeners\DeathListener.class
 com\phobia\levels\managers\LevelManager.class
