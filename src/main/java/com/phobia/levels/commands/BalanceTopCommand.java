@@ -1,7 +1,12 @@
 package com.phobia.levels.commands;
 
-import com.phobia.levels.LevelPlugin;
-import com.phobia.levels.LevelsAPI;
+import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -10,9 +15,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
-import java.util.*;
-import java.util.stream.Collectors;
+import com.phobia.levels.LevelPlugin;
+import com.phobia.levels.LevelsAPI;
 
 public class BalanceTopCommand implements CommandExecutor {
 
@@ -38,17 +42,19 @@ public class BalanceTopCommand implements CommandExecutor {
 
         sender.sendMessage(ChatColor.GRAY + "Loading leaderboard, please wait...");
 
-        // Load all data from files
-        File folder = new File(LevelPlugin.getInstance().getDataFolder(), "userdata");
+        // --- UPDATED FOLDER PATH TO MATCH PLAYERDATAMANAGER ---
+        File folder = new File(LevelPlugin.getInstance().getDataFolder(), "playerdata");
+        
         if (!folder.exists() || folder.listFiles() == null) {
-            sender.sendMessage(ChatColor.RED + "No player data found.");
+            sender.sendMessage(ChatColor.RED + "No player data found in /playerdata/ folder.");
             return true;
         }
 
         Map<String, Integer> balances = new HashMap<>();
 
         for (File file : folder.listFiles()) {
-            if (!file.getName().endsWith(".yml")) continue;
+            // Only process .yml files and skip common non-player files
+            if (!file.getName().endsWith(".yml") || file.getName().equalsIgnoreCase("config.yml")) continue;
 
             YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
             String uuidStr = file.getName().replace(".yml", "");
@@ -56,18 +62,28 @@ public class BalanceTopCommand implements CommandExecutor {
             // Get the balance based on which command was used
             int balance = isBank ? config.getInt("bankBalance", 0) : config.getInt("tokens", 0);
             
-            // Get name from Bukkit (cached) or fallback to UUID
-            UUID uuid = UUID.fromString(uuidStr);
-            OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
-            String name = (op.getName() != null) ? op.getName() : "Unknown (" + uuidStr.substring(0, 5) + ")";
-            
-            balances.put(name, balance);
+            try {
+                // Get name from Bukkit (cached) or fallback to UUID
+                UUID uuid = UUID.fromString(uuidStr);
+                OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
+                String name = (op.getName() != null) ? op.getName() : "Unknown (" + uuidStr.substring(0, 5) + ")";
+                
+                balances.put(name, balance);
+            } catch (IllegalArgumentException e) {
+                // This skips files that aren't named as valid UUIDs
+                continue;
+            }
         }
 
         // Sort by value descending
         List<Map.Entry<String, Integer>> sortedList = balances.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .collect(Collectors.toList());
+
+        if (sortedList.isEmpty()) {
+            sender.sendMessage(ChatColor.RED + "Leaderboard is currently empty.");
+            return true;
+        }
 
         int totalPages = (int) Math.ceil((double) sortedList.size() / ENTRIES_PER_PAGE);
         if (page > totalPages) page = totalPages;

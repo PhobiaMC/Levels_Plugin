@@ -52,6 +52,14 @@ public class LevelsAPI {
         }
     }
 
+    public static void addExperience(Player p, int amount) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        if (data != null) {
+            data.addXp(amount);
+            LevelPlugin.getInstance().getPlayerDataManager().save(p);
+        }
+    }
+
     public static boolean takeTokens(Player p, int amount) {
         PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
         if (data == null) return false;

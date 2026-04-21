@@ -2,6 +2,7 @@ package com.phobia.levels.commands;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -16,9 +17,9 @@ public class TokenAdminCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-        // Usage: /tokenadmin <setpocket/setbank> <player> <amount>
-        if (args.length != 3) {
-            sender.sendMessage(ChatColor.RED + "Usage: /tokenadmin <setpocket/setbank> <player> <amount>");
+        // Updated Usage: /tokenadmin <setpocket/setbank/reset> <player> [amount]
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Usage: /tokenadmin <setpocket/setbank/reset> <player> [amount]");
             return true;
         }
 
@@ -29,15 +30,50 @@ public class TokenAdminCommand implements CommandExecutor {
         }
 
         String action = args[0].toLowerCase();
+        String targetName = args[1];
         
-        // Target player check
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found or offline.");
+        // --- Offline Player Support ---
+        // First check if player is online, otherwise look up offline data
+        Player onlineTarget = Bukkit.getPlayer(targetName);
+        OfflinePlayer offlineTarget = (onlineTarget != null) ? onlineTarget : Bukkit.getOfflinePlayer(targetName);
+
+        // Check if the player has ever played before (to avoid creating junk files)
+        if (!offlineTarget.hasPlayedBefore() && onlineTarget == null) {
+            sender.sendMessage(ChatColor.RED + "Player has never joined the server.");
             return true;
         }
 
-        // Amount check
+        // Load data using the appropriate method
+        PlayerData data;
+        if (onlineTarget != null) {
+            data = LevelPlugin.getInstance().getPlayerDataManager().getData(onlineTarget);
+        } else {
+            data = LevelPlugin.getInstance().getPlayerDataManager().loadOfflineData(offlineTarget);
+        }
+
+        if (data == null) {
+            sender.sendMessage(ChatColor.RED + "Data not found for this player.");
+            return true;
+        }
+
+        // Handle Reset Action
+        if (action.equals("reset")) {
+            data.setTokens(0);
+            setBankInternal(data, 0);
+            sender.sendMessage(ChatColor.GREEN + "Reset all token balances for " + offlineTarget.getName() + ".");
+            if (onlineTarget != null) {
+                onlineTarget.sendMessage(ChatColor.RED + "Your token and bank balances have been reset by an administrator.");
+            }
+            saveData(offlineTarget, data);
+            return true;
+        }
+
+        // Amount check for setpocket and setbank
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Usage: /tokenadmin " + action + " <player> <amount>");
+            return true;
+        }
+
         int amount;
         try {
             amount = Integer.parseInt(args[2]);
@@ -51,64 +87,52 @@ public class TokenAdminCommand implements CommandExecutor {
             return true;
         }
 
-        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(target);
-        if (data == null) {
-            sender.sendMessage(ChatColor.RED + "Data not found for this player.");
-            return true;
-        }
-
         String formattedAmount = LevelsAPI.format(amount);
 
         if (action.equals("setpocket")) {
             data.setTokens(amount);
-            sender.sendMessage(ChatColor.GREEN + "Set pocket tokens for " + target.getName() + " to " + ChatColor.YELLOW + formattedAmount + "⛁");
-            target.sendMessage(ChatColor.GRAY + "An administrator set your pocket tokens to " + ChatColor.YELLOW + formattedAmount + "⛁");
+            sender.sendMessage(ChatColor.GREEN + "Set pocket tokens for " + offlineTarget.getName() + " to " + ChatColor.YELLOW + formattedAmount + "⛁");
+            if (onlineTarget != null) {
+                onlineTarget.sendMessage(ChatColor.GRAY + "An administrator set your pocket tokens to " + ChatColor.YELLOW + formattedAmount + "⛁");
+            }
         } 
         else if (action.equals("setbank")) {
-            data.setDeaths(0); // Optional: if you wanted to reset deaths, but here we set bank balance
-            // Correct logic for setting bank balance:
-            // Using setTokens was pocket, we need a setter for bank or use the variable
-            // Since we added bankBalance to PlayerData:
-            data.withdraw(data.getBankBalance()); // Clear current bank
-            data.deposit(0); // Reset tokens then:
-            
-            // Actually, let's just add a direct setter in PlayerData if not present, 
-            // but for now we use the logic available:
-            // Accessing the private variable via a public setter is best.
-            // Assuming we added setBankBalance in the previous PlayerData patch:
-            
-            // To be safe with current code, we'll use a direct balance overwrite:
             setBankInternal(data, amount);
-            
-            sender.sendMessage(ChatColor.GREEN + "Set bank balance for " + target.getName() + " to " + ChatColor.GOLD + formattedAmount + "⛁");
-            target.sendMessage(ChatColor.GRAY + "An administrator set your bank balance to " + ChatColor.GOLD + formattedAmount + "⛁");
+            sender.sendMessage(ChatColor.GREEN + "Set bank balance for " + offlineTarget.getName() + " to " + ChatColor.GOLD + formattedAmount + "⛁");
+            if (onlineTarget != null) {
+                onlineTarget.sendMessage(ChatColor.GRAY + "An administrator set your bank balance to " + ChatColor.GOLD + formattedAmount + "⛁");
+            }
         } 
         else {
-            sender.sendMessage(ChatColor.RED + "Invalid action. Use 'setpocket' or 'setbank'.");
+            sender.sendMessage(ChatColor.RED + "Invalid action. Use 'setpocket', 'setbank', or 'reset'.");
             return true;
         }
 
-        // Save immediately
-        LevelPlugin.getInstance().getPlayerDataManager().save(target);
-
+        // Final Save
+        saveData(offlineTarget, data);
         return true;
+    }
+
+    // Helper to handle saving based on online status
+    private void saveData(OfflinePlayer target, PlayerData data) {
+        if (target.isOnline() && target.getPlayer() != null) {
+            LevelPlugin.getInstance().getPlayerDataManager().save(target.getPlayer());
+        } else {
+            LevelPlugin.getInstance().getPlayerDataManager().saveOfflineData(target, data);
+        }
     }
 
     // Helper to ensure bank is set correctly if PlayerData setter is missing
     private void setBankInternal(PlayerData data, int amount) {
-        // This is a logic workaround to set the bank precisely 
-        // by calculating the difference.
         int currentBank = data.getBankBalance();
         int difference = amount - currentBank;
         
         if (difference > 0) {
-            // We need to 'cheat' the pocket to deposit the difference
             int oldPocket = data.getTokens();
             data.setTokens(difference);
             data.deposit(difference);
             data.setTokens(oldPocket);
         } else if (difference < 0) {
-            // Withdraw the excess to discard it
             data.withdraw(Math.abs(difference));
             data.setTokens(data.getTokens() - Math.abs(difference));
         }
