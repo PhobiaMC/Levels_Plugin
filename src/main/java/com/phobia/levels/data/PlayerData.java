@@ -19,6 +19,7 @@ public class PlayerData {
     private int deaths;
     private int tokens; // This is now "Pocket Cash"
     private int bankBalance; // NEW: Bank balance
+    private int prestige; // NEW: Prestige counter
 
     public PlayerData(Player player) {
         this.player = player;
@@ -30,6 +31,7 @@ public class PlayerData {
         this.deaths = 0;
         this.tokens = 0;
         this.bankBalance = 0;
+        this.prestige = 0; // Initialize prestige
     }
 
     private int calculateRequiredXp(int currentLevel) {
@@ -45,6 +47,7 @@ public class PlayerData {
         this.requiredXp = calculateRequiredXp(1);
         this.tokens = 0;
         this.bankBalance = 0;
+        this.prestige = 0; // Reset prestige on admin wipe
         player.sendMessage("§c§lRESET! §7An administrator has reset your levels, XP, and bank account.");
     }
 
@@ -59,6 +62,7 @@ public class PlayerData {
         this.deaths = config.getInt("deaths", 0);
         this.tokens = config.getInt("tokens", 0);
         this.bankBalance = config.getInt("bankBalance", 0); // NEW: Load bank data
+        this.prestige = config.getInt("prestige", 0); // Load prestige data
     }
 
     public void save(FileConfiguration config) {
@@ -70,6 +74,7 @@ public class PlayerData {
         config.set("deaths", deaths);
         config.set("tokens", tokens);
         config.set("bankBalance", bankBalance); // NEW: Save bank data
+        config.set("prestige", prestige); // Save prestige data
     }
 
     // --- NEW: Banking Logic ---
@@ -100,6 +105,7 @@ public class PlayerData {
     public int getMobKills() { return mobKills; }
     public int getDeaths() { return deaths; }
     public int getTokens() { return tokens; }
+    public int getPrestige() { return prestige; } // Getter for prestige
 
     public void setLevel(int level) { 
         this.level = level; 
@@ -112,8 +118,14 @@ public class PlayerData {
     public void setMobKills(int mobKills) { this.mobKills = mobKills; }
     public void setDeaths(int deaths) { this.deaths = deaths; }
     public void setTokens(int tokens) { this.tokens = tokens; }
+    public void setPrestige(int prestige) { this.prestige = prestige; } // Setter for prestige
 
     public void addXp(int amount) {
+        // Stop scaling up if level is already maxed at 120
+        if (this.level >= 120) {
+            this.xp = 0;
+            return;
+        }
         this.xp += amount;
         checkLevelUp();
     }
@@ -145,6 +157,11 @@ public class PlayerData {
         FileConfiguration config = LevelPlugin.getInstance().getConfig();
         
         while (xp >= requiredXp) {
+            if (this.level >= 120) {
+                this.xp = 0;
+                break;
+            }
+
             xp -= requiredXp;
             level++;
             requiredXp = calculateRequiredXp(level);

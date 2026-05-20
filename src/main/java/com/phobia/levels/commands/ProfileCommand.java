@@ -64,11 +64,19 @@ public class ProfileCommand implements CommandExecutor {
         String pKDR = String.format("%.2f", data.getKdr());
         String tKDR = String.format("%.2f", data.getTkdr());
 
+        // --- NEW: Dynamic Prestige Icon Pulling ---
+        String prestigeIcon = "";
+        int currentPrestige = data.getPrestige();
+        if (currentPrestige > 0) {
+            String rawIcon = LevelPlugin.getInstance().getConfig().getString("prestige-system.icons." + currentPrestige, "");
+            prestigeIcon = ChatColor.translateAlternateColorCodes('&', rawIcon);
+        }
+
         viewer.sendMessage("");
         viewer.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + " PROFILE " + ChatColor.YELLOW + name);
         
-        // Progress Section
-        viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "Level: " + ChatColor.GREEN + data.getLevel() 
+        // Progress Section (Updated to display prestige icon cleanly right in front of the level number)
+        viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "Level: " + prestigeIcon + ChatColor.GREEN + data.getLevel() 
             + ChatColor.DARK_GRAY + " (" + ChatColor.AQUA + data.getXp() + ChatColor.GRAY + "/" + ChatColor.AQUA + data.getRequiredXp() + " XP" + ChatColor.DARK_GRAY + ")");
         
         // Combat Section

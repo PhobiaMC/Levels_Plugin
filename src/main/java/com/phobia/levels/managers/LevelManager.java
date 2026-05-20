@@ -14,6 +14,11 @@ public class LevelManager {
     public void addXp(Player player, int amount) {
         PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(player);
         
+        // Block XP accumulation if the player is at the maximum level 120 cap
+        if (data.getLevel() >= 120) {
+            return;
+        }
+
         // --- NEW: 1.5x Gold Armor XP Boost ---
         if (isWearingFullGold(player)) {
             amount = (int) (amount * 1.5);

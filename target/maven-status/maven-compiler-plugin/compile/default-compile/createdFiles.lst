@@ -14,6 +14,7 @@ com\phobia\levels\managers\PlayerDataManager.class
 com\phobia\levels\listeners\PlayerQuitListener.class
 com\phobia\levels\LevelsAPI.class
 com\phobia\levels\commands\BalanceTopCommand.class
+com\phobia\levels\commands\PrestigeCommand.class
 com\phobia\levels\commands\ProfileCommand.class
 com\phobia\levels\listeners\PlayerJoinListener.class
 com\phobia\levels\scoreboard\ScoreboardHandler$1.class

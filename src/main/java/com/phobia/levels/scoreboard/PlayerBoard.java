@@ -67,7 +67,16 @@ public class PlayerBoard {
         double globalMult = LevelPlugin.getInstance().getGlobalBooster();
         long boosterTime = LevelPlugin.getInstance().getBoosterTimeRemaining();
 
-        updateTeamText("level", ChatColor.WHITE + "Level: " + ChatColor.GREEN + data.getLevel());
+        // --- NEW: Dynamic Prestige Icon Processing ---
+        String prestigeIcon = "";
+        int currentPrestige = data.getPrestige();
+        if (currentPrestige > 0) {
+            String rawIcon = LevelPlugin.getInstance().getConfig().getString("prestige-system.icons." + currentPrestige, "");
+            prestigeIcon = ChatColor.translateAlternateColorCodes('&', rawIcon);
+        }
+
+        // Apply prestige icon right before the level label layout line
+        updateTeamText("level", ChatColor.WHITE + "Level: " + prestigeIcon + ChatColor.GREEN + data.getLevel());
         updateTeamText("xp", ChatColor.WHITE + "XP: " + ChatColor.GREEN + data.getXp() + ChatColor.GRAY + "/" + ChatColor.GREEN + data.getRequiredXp());
         updateTeamText("kills", ChatColor.WHITE + "Kills: " + ChatColor.GREEN + data.getKills());
         updateTeamText("mobkills", ChatColor.WHITE + "Mob Kills: " + ChatColor.GREEN + data.getMobKills());

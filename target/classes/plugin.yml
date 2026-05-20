@@ -31,6 +31,9 @@ commands:
   banktop:
     description: View top bank balances.
     aliases: [topbank]
+  prestige:
+    description: Reset your level at level 120 to advance your prestige tier.
+    usage: /prestige
 
 permissions:
   levels.multiplier.1:

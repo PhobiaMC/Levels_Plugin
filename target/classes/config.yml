@@ -16,7 +16,22 @@ xp:
 
 leveledmobs-xp-enabled: true
 
-# --- NEW SECTION: Level Up Rewards & Messages ---
+# --- NEW SECTION: Prestige Configuration ---
+prestige-system:
+  max-prestige: 3
+  costs:
+    '1': 5000     # Cost in tokens to reach Prestige 1
+    '2': 10000    # Cost in tokens to reach Prestige 2
+    '3': 20000    # Cost in tokens to reach Prestige 3
+  icons:
+    '1': "&6① "  # Icon/Prefix for Prestige 1
+    '2': "&c② "  # Icon/Prefix for Prestige 2
+    '3': "&4⭐ "  # Icon/Prefix for Prestige 3
+  messages:
+    broadcast: "§6§lPRESTIGE! §b%player% §7has advanced to §d§lPrestige %prestige%§7!"
+    success: "§a§lSUCCESS! §7You reset to level 1 and unlocked §d§lPrestige %prestige%§7!"
+
+# --- SECTION: Level Up Rewards & Messages ---
 level-up:
   # The default message if a specific level isn't defined below
   default-message: "§a§lLEVEL UP! §7You are now level §b§l%level%§7!"

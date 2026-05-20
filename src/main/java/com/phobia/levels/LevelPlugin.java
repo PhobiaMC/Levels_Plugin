@@ -9,9 +9,10 @@ import com.phobia.levels.commands.BalanceTopCommand;
 import com.phobia.levels.commands.GiveTokensCommand;
 import com.phobia.levels.commands.GiveXpCommand;
 import com.phobia.levels.commands.LevelCommand;
+import com.phobia.levels.commands.PrestigeCommand;
 import com.phobia.levels.commands.ProfileCommand;
 import com.phobia.levels.commands.TokenAdminCommand;
-import com.phobia.levels.commands.XpBoostCommand;
+import com.phobia.levels.commands.XpBoostCommand; // New Command Import
 import com.phobia.levels.listeners.DeathListener;
 import com.phobia.levels.listeners.KillListener;
 import com.phobia.levels.listeners.PlayerJoinListener;
@@ -57,6 +58,7 @@ public class LevelPlugin extends JavaPlugin {
         getCommand("tokenadmin").setExecutor(new TokenAdminCommand());
         getCommand("baltop").setExecutor(balTop);
         getCommand("banktop").setExecutor(balTop);
+        getCommand("prestige").setExecutor(new PrestigeCommand()); // Registered /prestige command
 
         this.scoreboardHandler.start();
 

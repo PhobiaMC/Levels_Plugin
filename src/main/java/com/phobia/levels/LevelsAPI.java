@@ -86,4 +86,21 @@ public class LevelsAPI {
         if (success) LevelPlugin.getInstance().getPlayerDataManager().save(p);
         return success;
     }
+
+    // =========================================================
+    // >>> NEW: PRESTIGE API INTERFACE
+    // =========================================================
+
+    public static int getPrestige(Player p) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        return (data != null) ? data.getPrestige() : 0;
+    }
+
+    public static void setPrestige(Player p, int prestigeLevel) {
+        PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(p);
+        if (data != null) {
+            data.setPrestige(prestigeLevel);
+            LevelPlugin.getInstance().getPlayerDataManager().save(p);
+        }
+    }
 }
