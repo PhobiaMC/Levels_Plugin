@@ -1,6 +1,9 @@
 package com.phobia.levels.commands;
 
 import java.io.File;
+import java.lang.reflect.Method;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -13,6 +16,10 @@ import org.bukkit.entity.Player;
 import com.phobia.levels.LevelPlugin;
 import com.phobia.levels.data.PlayerData;
 import com.phobia.levels.managers.PlayerDataManager;
+
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 
 public class ProfileCommand implements CommandExecutor {
 
@@ -28,7 +35,7 @@ public class ProfileCommand implements CommandExecutor {
             }
             Player player = (Player) sender;
             PlayerData data = manager.getData(player);
-            sendProfile(player, player.getName(), data);
+            sendProfile(player, player.getName(), player, data);
             return true;
         }
 
@@ -38,7 +45,7 @@ public class ProfileCommand implements CommandExecutor {
         
         if (online != null) {
             PlayerData data = manager.getData(online);
-            sendProfile(sender, online.getName(), data);
+            sendProfile(sender, online.getName(), online, data);
             return true;
         }
 
@@ -55,16 +62,16 @@ public class ProfileCommand implements CommandExecutor {
         }
 
         PlayerData offlineData = manager.loadOfflineData(offline);
-        sendProfile(sender, offline.getName(), offlineData);
+        sendProfile(sender, offline.getName(), offline, offlineData);
         return true;
     }
 
-    private void sendProfile(CommandSender viewer, String name, PlayerData data) {
+    private void sendProfile(CommandSender viewer, String name, OfflinePlayer targetPlayer, PlayerData data) {
         // Formatted KDRs
         String pKDR = String.format("%.2f", data.getKdr());
         String tKDR = String.format("%.2f", data.getTkdr());
 
-        // --- NEW: Dynamic Prestige Icon Pulling ---
+        // --- Dynamic Prestige Icon Pulling ---
         String prestigeIcon = "";
         int currentPrestige = data.getPrestige();
         if (currentPrestige > 0) {
@@ -72,10 +79,24 @@ public class ProfileCommand implements CommandExecutor {
             prestigeIcon = ChatColor.translateAlternateColorCodes('&', rawIcon);
         }
 
+        // --- SAFE REFLECTION: Cross-Plugin JSON Fetching (Supports Offline Targets) ---
+        String badgesJson = "[]";
+        
+        if (Bukkit.getPluginManager().isPluginEnabled("mcgunsbase")) {
+            try {
+                Class<?> apiClass = Class.forName("com.phobia.mcgunsbase.api.LevelsAPI");
+                // Updated method parameters to fetch using OfflinePlayer.class
+                Method getBadgesMethod = apiClass.getMethod("getPlayerBadgesJson", OfflinePlayer.class);
+                badgesJson = (String) getBadgesMethod.invoke(null, targetPlayer);
+            } catch (Exception e) {
+                badgesJson = "[]";
+            }
+        }
+
         viewer.sendMessage("");
         viewer.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + " PROFILE " + ChatColor.YELLOW + name);
         
-        // Progress Section (Updated to display prestige icon cleanly right in front of the level number)
+        // Progress Section
         viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "Level: " + prestigeIcon + ChatColor.GREEN + data.getLevel() 
             + ChatColor.DARK_GRAY + " (" + ChatColor.AQUA + data.getXp() + ChatColor.GRAY + "/" + ChatColor.AQUA + data.getRequiredXp() + " XP" + ChatColor.DARK_GRAY + ")");
         
@@ -88,10 +109,49 @@ public class ProfileCommand implements CommandExecutor {
         viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "KDR: " + ChatColor.GOLD + pKDR 
             + ChatColor.DARK_GRAY + " | " + ChatColor.GRAY + "TKDR: " + ChatColor.GOLD + tKDR);
         
-        // Economy Section (Updated for Banking)
+        // Economy Section
         viewer.sendMessage(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "Pocket: " + ChatColor.YELLOW + data.getTokens() + "⛁"
             + ChatColor.DARK_GRAY + " | " + ChatColor.GRAY + "Bank: " + ChatColor.GOLD + data.getBankBalance() + "⛁");
         
+        // --- Interactive Badges Line Building ---
+        TextComponent badgesRow = new TextComponent(ChatColor.DARK_GRAY + " » " + ChatColor.GRAY + "Badges: ");
+
+        if (badgesJson.equals("[]")) {
+            badgesRow.addExtra(new TextComponent(ChatColor.GRAY + "None"));
+        } else {
+            // Regex engine to extract fields from JSON string entries safely without heavy dependencies
+            Pattern pattern = Pattern.compile("\\{\"icon\":\"(.*?)\",\"name\":\"(.*?)\",\"desc\":\"(.*?)\"\\}");
+            Matcher matcher = pattern.matcher(badgesJson);
+            boolean first = true;
+
+            while (matcher.find()) {
+                String icon = matcher.group(1);
+                String displayName = ChatColor.translateAlternateColorCodes('&', matcher.group(2));
+                String description = matcher.group(3);
+
+                if (!first) {
+                    badgesRow.addExtra(new TextComponent(" "));
+                }
+                first = false;
+
+                // Create individual hover component for this specific badge
+                TextComponent badgeIconComponent = new TextComponent(ChatColor.RESET + icon);
+                
+                String hoverText = displayName + "\n" + ChatColor.GRAY + description;
+                badgeIconComponent.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
+                    new ComponentBuilder(hoverText).create()));
+
+                badgesRow.addExtra(badgeIconComponent);
+            }
+        }
+
+        // Send chat components to players natively, fallback to normal messaging for console log visibility
+        if (viewer instanceof Player) {
+            ((Player) viewer).spigot().sendMessage(badgesRow);
+        } else {
+            viewer.sendMessage(badgesRow.toLegacyText());
+        }
+
         viewer.sendMessage("");
     }
 }
