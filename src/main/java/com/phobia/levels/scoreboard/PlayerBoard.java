@@ -64,8 +64,12 @@ public class PlayerBoard {
 
         PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(player);
         double playerMult = LevelPlugin.getInstance().getPlayerMultiplier(player);
-        double globalMult = LevelPlugin.getInstance().getGlobalBooster();
-        long boosterTime = LevelPlugin.getInstance().getBoosterTimeRemaining();
+        
+        double globalXpMult = LevelPlugin.getInstance().getGlobalBooster();
+        long xpBoosterTime = LevelPlugin.getInstance().getBoosterTimeRemaining();
+
+        double globalTokenMult = LevelPlugin.getInstance().getTokenBooster();
+        long tokenBoosterTime = LevelPlugin.getInstance().getTokenBoosterTimeRemaining();
 
         // --- NEW: Dynamic Prestige Icon Processing ---
         String prestigeIcon = "";
@@ -90,16 +94,28 @@ public class PlayerBoard {
         
         updateTeamText("pboost", ChatColor.WHITE + "Your Boost: " + ChatColor.AQUA + "x" + playerMult);
 
-        if (globalMult > 1.0) {
-            updateTeamText("sboost", ChatColor.WHITE + "Server Boost: " + ChatColor.LIGHT_PURPLE + "x" + globalMult);
-            
-            if (boosterTime > 0) {
-                long minutes = boosterTime / 60;
-                long seconds = boosterTime % 60;
-                updateTeamText("timer", ChatColor.GRAY + "Ends in: " + ChatColor.WHITE + minutes + "m " + seconds + "s");
-            } else {
-                updateTeamText("timer", ""); 
-            }
+        boolean hasXpBoost = globalXpMult > 1.0;
+        boolean hasTokenBoost = globalTokenMult > 1.0;
+
+        if (hasXpBoost && hasTokenBoost) {
+            long minTime = Math.min(xpBoosterTime, tokenBoosterTime);
+            long minutes = minTime / 60;
+            long seconds = minTime % 60;
+
+            updateTeamText("sboost", ChatColor.WHITE + "XP & Token Boost");
+            updateTeamText("timer", ChatColor.LIGHT_PURPLE + "x" + globalXpMult + " XP " + ChatColor.YELLOW + "x" + globalTokenMult + " T (" + minutes + "m)");
+        } else if (hasXpBoost) {
+            long minutes = xpBoosterTime / 60;
+            long seconds = xpBoosterTime % 60;
+
+            updateTeamText("sboost", ChatColor.WHITE + "Server Boost: " + ChatColor.LIGHT_PURPLE + "x" + globalXpMult);
+            updateTeamText("timer", ChatColor.GRAY + "Ends in: " + ChatColor.WHITE + minutes + "m " + seconds + "s");
+        } else if (hasTokenBoost) {
+            long minutes = tokenBoosterTime / 60;
+            long seconds = tokenBoosterTime % 60;
+
+            updateTeamText("sboost", ChatColor.WHITE + "Token Boost: " + ChatColor.YELLOW + "x" + globalTokenMult);
+            updateTeamText("timer", ChatColor.GRAY + "Ends in: " + ChatColor.WHITE + minutes + "m " + seconds + "s");
         } else {
             updateTeamText("sboost", ChatColor.GRAY + "" + ChatColor.ITALIC + "*No active");
             updateTeamText("timer", ChatColor.GRAY + "" + ChatColor.ITALIC + " booster*");

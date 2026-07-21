@@ -21,22 +21,18 @@ public class PlayerDataManager {
         if (dataMap.containsKey(player)) {
             return dataMap.get(player);
         }
-
         PlayerData data = new PlayerData(player);
         load(player, data);
         dataMap.put(player, data);
-
         return data;
     }
 
     private void load(Player player, PlayerData data) {
         File file = getPlayerFile(player);
-
         if (!file.exists()) {
             save(player);
             return;
         }
-
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         data.load(config);
     }
@@ -50,12 +46,9 @@ public class PlayerDataManager {
     public void save(Player player) {
         PlayerData data = dataMap.get(player);
         if (data == null) return;
-
         File file = getPlayerFile(player);
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
-
         data.save(config);
-
         try {
             config.save(file);
         } catch (IOException e) {
@@ -89,17 +82,31 @@ public class PlayerDataManager {
                 "playerdata/" + offline.getUniqueId() + ".yml");
     }
 
+    /**
+     * If the player is currently online, returns their LIVE in-memory data
+     * to avoid a stale file read racing against unsaved in-memory state.
+     * Otherwise loads directly from their YML file on disk.
+     */
     public PlayerData loadOfflineData(OfflinePlayer offline) {
-        File file = getOfflinePlayerFile(offline);
-        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+        // If they're online, return the live object — never read stale file data
+        if (offline.isOnline() && offline.getPlayer() != null) {
+            return getData(offline.getPlayer());
+        }
 
-        // Create temporary data object (no Player instance)
+        File file = getOfflinePlayerFile(offline);
+        if (!file.exists()) return new PlayerData(null);
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         PlayerData data = new PlayerData(null);
         data.load(config);
-
         return data;
     }
 
+    /**
+     * Saves a PlayerData object for an offline player directly to their YML file.
+     * Should only be called when the player is confirmed offline — if they're
+     * online their live dataMap entry would be out of sync.
+     */
     public void saveOfflineData(OfflinePlayer offline, PlayerData data) {
         File file = getOfflinePlayerFile(offline);
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);

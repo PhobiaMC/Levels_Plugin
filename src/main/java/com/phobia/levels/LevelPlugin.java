@@ -12,6 +12,7 @@ import com.phobia.levels.commands.LevelCommand;
 import com.phobia.levels.commands.PrestigeCommand;
 import com.phobia.levels.commands.ProfileCommand;
 import com.phobia.levels.commands.TokenAdminCommand;
+import com.phobia.levels.commands.TokenBoostCommand; // New Command Import
 import com.phobia.levels.commands.XpBoostCommand; // New Command Import
 import com.phobia.levels.listeners.DeathListener;
 import com.phobia.levels.listeners.KillListener;
@@ -31,6 +32,9 @@ public class LevelPlugin extends JavaPlugin {
 
     private double globalXpBoost = 1.0;
     private long boostExpireTime = 0;
+
+    private double globalTokenBoost = 1.0;
+    private long tokenBoostExpireTime = 0;
 
     @Override
     public void onEnable() {
@@ -55,6 +59,7 @@ public class LevelPlugin extends JavaPlugin {
         getCommand("givetokens").setExecutor(new GiveTokensCommand());
         getCommand("givexp").setExecutor(new GiveXpCommand());
         getCommand("xpboost").setExecutor(new XpBoostCommand());
+        getCommand("tokenboost").setExecutor(new TokenBoostCommand());
         getCommand("tokenadmin").setExecutor(new TokenAdminCommand());
         getCommand("baltop").setExecutor(balTop);
         getCommand("banktop").setExecutor(balTop);
@@ -69,6 +74,12 @@ public class LevelPlugin extends JavaPlugin {
                 globalXpBoost = 1.0;
                 boostExpireTime = 0;
                 Bukkit.broadcastMessage("§eThe global XP boost has ended.");
+            }
+
+            if (tokenBoostExpireTime != 0 && System.currentTimeMillis() > tokenBoostExpireTime) {
+                globalTokenBoost = 1.0;
+                tokenBoostExpireTime = 0;
+                Bukkit.broadcastMessage("§eThe global Token boost has ended.");
             }
         }, 20L, 20L);
 
@@ -128,6 +139,21 @@ public class LevelPlugin extends JavaPlugin {
     public long getBoosterTimeRemaining() {
         if (boostExpireTime == 0) return 0;
         long diff = boostExpireTime - System.currentTimeMillis();
+        return Math.max(diff / 1000, 0);
+    }
+
+    public double getTokenBooster() {
+        return globalTokenBoost;
+    }
+
+    public void setTokenBooster(double multiplier, int seconds) {
+        this.globalTokenBoost = multiplier;
+        this.tokenBoostExpireTime = System.currentTimeMillis() + (seconds * 1000L);
+    }
+
+    public long getTokenBoosterTimeRemaining() {
+        if (tokenBoostExpireTime == 0) return 0;
+        long diff = tokenBoostExpireTime - System.currentTimeMillis();
         return Math.max(diff / 1000, 0);
     }
 }

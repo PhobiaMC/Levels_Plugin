@@ -34,6 +34,10 @@ commands:
   prestige:
     description: Reset your level at level 120 to advance your prestige tier.
     usage: /prestige
+  tokenboost:
+    description: Manage or view the global token booster.
+    usage: /tokenboost
+    permission: levels.tokenboost.manage
 
 permissions:
   levels.multiplier.1:

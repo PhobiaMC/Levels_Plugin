@@ -88,7 +88,7 @@ public class KillListener implements Listener {
         }
     }
 
-    private void reward(Player player, int tokens, int baseXp, boolean isAssist, boolean isPlayerKill) {
+    private void reward(Player player, int baseTokens, int baseXp, boolean isAssist, boolean isPlayerKill) {
         PlayerData data = LevelPlugin.getInstance().getPlayerDataManager().getData(player);
         
         // --- FIXED: Distinguish between Player kills and Mob kills ---
@@ -100,7 +100,10 @@ public class KillListener implements Listener {
             }
         }
         
-        if (tokens > 0) data.addTokens(tokens);
+        double tokenBooster = LevelPlugin.getInstance().getTokenBooster();
+        int finalTokens = (int) Math.round(baseTokens * tokenBooster);
+
+        if (finalTokens > 0) data.addTokens(finalTokens);
 
         double multi = LevelPlugin.getInstance().getPlayerMultiplier(player);
         double global = LevelPlugin.getInstance().getGlobalBooster();
@@ -118,7 +121,7 @@ public class KillListener implements Listener {
         player.spigot().sendMessage(
             ChatMessageType.ACTION_BAR,
             new TextComponent(prefix + ChatColor.GREEN + "+" + finalXp + " XP" + bonusTag
-            + ChatColor.GRAY + " |" + ChatColor.YELLOW + " +" + tokens + " Tokens")
+            + ChatColor.GRAY + " |" + ChatColor.YELLOW + " +" + finalTokens + " Tokens")
         );
     }
 

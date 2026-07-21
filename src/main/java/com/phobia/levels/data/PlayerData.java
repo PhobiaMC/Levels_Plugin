@@ -1,5 +1,8 @@
 package com.phobia.levels.data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -17,9 +20,10 @@ public class PlayerData {
     private int kills;
     private int mobKills;
     private int deaths;
-    private int tokens; // This is now "Pocket Cash"
-    private int bankBalance; // NEW: Bank balance
-    private int prestige; // NEW: Prestige counter
+    private int tokens;
+    private int bankBalance;
+    private int prestige;
+    private List<String> badges = new ArrayList<>(); // MOVED: field declaration up with the rest
 
     public PlayerData(Player player) {
         this.player = player;
@@ -31,7 +35,7 @@ public class PlayerData {
         this.deaths = 0;
         this.tokens = 0;
         this.bankBalance = 0;
-        this.prestige = 0; // Initialize prestige
+        this.prestige = 0;
     }
 
     private int calculateRequiredXp(int currentLevel) {
@@ -47,7 +51,8 @@ public class PlayerData {
         this.requiredXp = calculateRequiredXp(1);
         this.tokens = 0;
         this.bankBalance = 0;
-        this.prestige = 0; // Reset prestige on admin wipe
+        this.prestige = 0;
+        // Intentionally NOT resetting badges — they are permanent achievements
         player.sendMessage("§c§lRESET! §7An administrator has reset your levels, XP, and bank account.");
     }
 
@@ -61,8 +66,11 @@ public class PlayerData {
         this.mobKills = config.getInt("mobKills", 0);
         this.deaths = config.getInt("deaths", 0);
         this.tokens = config.getInt("tokens", 0);
-        this.bankBalance = config.getInt("bankBalance", 0); // NEW: Load bank data
-        this.prestige = config.getInt("prestige", 0); // Load prestige data
+        this.bankBalance = config.getInt("bankBalance", 0);
+        this.prestige = config.getInt("prestige", 0);
+        // ADDED: Load badge list — getStringList returns empty list if key is absent,
+        // so existing player files with no badge entry load cleanly with no errors.
+        this.badges = new ArrayList<>(config.getStringList("badges"));
     }
 
     public void save(FileConfiguration config) {
@@ -73,11 +81,14 @@ public class PlayerData {
         config.set("mobKills", mobKills);
         config.set("deaths", deaths);
         config.set("tokens", tokens);
-        config.set("bankBalance", bankBalance); // NEW: Save bank data
-        config.set("prestige", prestige); // Save prestige data
+        config.set("bankBalance", bankBalance);
+        config.set("prestige", prestige);
+        // ADDED: Save badge list — stored as a YAML string list under the "badges" key
+        config.set("badges", badges);
     }
 
-    // --- NEW: Banking Logic ---
+    // --- Banking ---
+
     public int getBankBalance() { return bankBalance; }
 
     public boolean deposit(int amount) {
@@ -98,6 +109,8 @@ public class PlayerData {
         return false;
     }
 
+    // --- Getters ---
+
     public int getLevel() { return level; }
     public int getXp() { return xp; }
     public int getRequiredXp() { return requiredXp; }
@@ -105,23 +118,47 @@ public class PlayerData {
     public int getMobKills() { return mobKills; }
     public int getDeaths() { return deaths; }
     public int getTokens() { return tokens; }
-    public int getPrestige() { return prestige; } // Getter for prestige
+    public int getPrestige() { return prestige; }
+    public List<String> getBadges() { return badges; }
 
-    public void setLevel(int level) { 
-        this.level = level; 
+    // --- Setters ---
+
+    public void setLevel(int level) {
+        this.level = level;
         this.requiredXp = calculateRequiredXp(level);
     }
-    
+
     public void setXp(int xp) { this.xp = xp; }
     public void setRequiredXp(int requiredXp) { this.requiredXp = requiredXp; }
     public void setKills(int kills) { this.kills = kills; }
     public void setMobKills(int mobKills) { this.mobKills = mobKills; }
     public void setDeaths(int deaths) { this.deaths = deaths; }
     public void setTokens(int tokens) { this.tokens = tokens; }
-    public void setPrestige(int prestige) { this.prestige = prestige; } // Setter for prestige
+    public void setPrestige(int prestige) { this.prestige = prestige; }
+
+    public void setBadges(List<String> badges) {
+        this.badges = badges != null ? badges : new ArrayList<>();
+    }
+
+    // --- Badge helpers ---
+
+    public boolean hasBadge(String icon) {
+        return badges.contains(icon);
+    }
+
+    public boolean addBadge(String icon) {
+        if (icon == null || icon.isEmpty() || badges.contains(icon)) return false;
+        badges.add(icon);
+        return true;
+    }
+
+    public boolean removeBadge(String icon) {
+        return badges.remove(icon);
+    }
+
+    // --- XP / misc ---
 
     public void addXp(int amount) {
-        // Stop scaling up if level is already maxed at 120
         if (this.level >= 120) {
             this.xp = 0;
             return;
@@ -134,9 +171,7 @@ public class PlayerData {
     public void addMobKill() { this.mobKills++; }
     public void addDeath() { this.deaths++; }
 
-    public void addTokens(int amount) {
-        this.tokens += amount;
-    }
+    public void addTokens(int amount) { this.tokens += amount; }
 
     public boolean removeTokens(int amount) {
         if (tokens < amount) return false;
@@ -155,7 +190,7 @@ public class PlayerData {
 
     private void checkLevelUp() {
         FileConfiguration config = LevelPlugin.getInstance().getConfig();
-        
+
         while (xp >= requiredXp) {
             if (this.level >= 120) {
                 this.xp = 0;
@@ -175,15 +210,17 @@ public class PlayerData {
             if (config.contains(path)) {
                 message = config.getString(path + ".message");
                 tokenReward = config.getInt(path + ".tokens", 25);
-                
+
                 if (config.contains(path + ".commands")) {
                     for (String cmd : config.getStringList(path + ".commands")) {
-                        String formattedCmd = cmd.replace("%player%", player.getName()).replace("%level%", String.valueOf(level));
+                        String formattedCmd = cmd.replace("%player%", player.getName())
+                                                  .replace("%level%", String.valueOf(level));
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), formattedCmd);
                     }
                 }
             } else {
-                message = config.getString("level-up.default-message", "§a§lLEVEL UP! §7You are now level §b§l%level%§7!");
+                message = config.getString("level-up.default-message",
+                        "§a§lLEVEL UP! §7You are now level §b§l%level%§7!");
                 tokenReward = config.getInt("level-up.default-tokens", 25);
             }
 
