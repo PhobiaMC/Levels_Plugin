@@ -9,6 +9,8 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
 import com.phobia.levels.LevelPlugin;
+import com.phobia.levels.boosters.BoosterManager;
+import com.phobia.levels.boosters.BoosterType;
 import com.phobia.levels.data.PlayerData;
 
 public class PlayerBoard {
@@ -49,6 +51,10 @@ public class PlayerBoard {
         createLine("pboost", ChatColor.GRAY.toString(), 6);
         createLine("sboost", ChatColor.BLUE.toString(), 5);
         createLine("timer", ChatColor.GREEN.toString(), 4);
+
+        // ADDED: personal booster lines
+        createLine("pboost2", ChatColor.LIGHT_PURPLE.toString(), 3);
+        createLine("timer2", ChatColor.YELLOW.toString(), 2);
 
         objective.getScore(ChatColor.DARK_GRAY + "    mcguns.net  ").setScore(0);
     }
@@ -119,6 +125,39 @@ public class PlayerBoard {
         } else {
             updateTeamText("sboost", ChatColor.GRAY + "" + ChatColor.ITALIC + "*No active");
             updateTeamText("timer", ChatColor.GRAY + "" + ChatColor.ITALIC + " booster*");
+        }
+
+        // ADDED: personal booster display, mirrors the global block above
+        BoosterManager boosterManager = LevelPlugin.getInstance().getBoosterManager();
+        double personalXpMult = boosterManager.getPersonalMultiplier(player, BoosterType.XP);
+        double personalTokenMult = boosterManager.getPersonalMultiplier(player, BoosterType.TOKENS);
+        long personalXpTime = boosterManager.getPersonalRemainingSeconds(player, BoosterType.XP);
+        long personalTokenTime = boosterManager.getPersonalRemainingSeconds(player, BoosterType.TOKENS);
+
+        boolean hasPersonalXp = personalXpMult > 1.0;
+        boolean hasPersonalToken = personalTokenMult > 1.0;
+
+        if (hasPersonalXp && hasPersonalToken) {
+            long minTime = Math.min(personalXpTime, personalTokenTime);
+            long minutes = minTime / 60;
+
+            updateTeamText("pboost2", ChatColor.WHITE + "Personal Boost:");
+            updateTeamText("timer2", ChatColor.LIGHT_PURPLE + "x" + personalXpMult + " XP " + ChatColor.YELLOW + "x" + personalTokenMult + " T (" + minutes + "m)");
+        } else if (hasPersonalXp) {
+            long minutes = personalXpTime / 60;
+            long seconds = personalXpTime % 60;
+
+            updateTeamText("pboost2", ChatColor.WHITE + "Personal XP: " + ChatColor.LIGHT_PURPLE + "x" + personalXpMult);
+            updateTeamText("timer2", ChatColor.GRAY + "Ends in: " + ChatColor.WHITE + minutes + "m " + seconds + "s");
+        } else if (hasPersonalToken) {
+            long minutes = personalTokenTime / 60;
+            long seconds = personalTokenTime % 60;
+
+            updateTeamText("pboost2", ChatColor.WHITE + "Personal Token: " + ChatColor.YELLOW + "x" + personalTokenMult);
+            updateTeamText("timer2", ChatColor.GRAY + "Ends in: " + ChatColor.WHITE + minutes + "m " + seconds + "s");
+        } else {
+            updateTeamText("pboost2", "");
+            updateTeamText("timer2", "");
         }
     }
 

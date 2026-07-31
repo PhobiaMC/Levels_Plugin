@@ -21,6 +21,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 
 import com.phobia.levels.LevelPlugin;
+import com.phobia.levels.boosters.BoosterType; // ADDED
 import com.phobia.levels.data.PlayerData;
 import com.phobia.levels.scoreboard.PlayerBoard;
 
@@ -100,16 +101,20 @@ public class KillListener implements Listener {
             }
         }
         
+        // CHANGED: token math now also factors in the player's personal token booster
         double tokenBooster = LevelPlugin.getInstance().getTokenBooster();
-        int finalTokens = (int) Math.round(baseTokens * tokenBooster);
+        double personalTokenBooster = LevelPlugin.getInstance().getBoosterManager().getPersonalMultiplier(player, BoosterType.TOKENS);
+        int finalTokens = (int) Math.round(baseTokens * tokenBooster * personalTokenBooster);
 
         if (finalTokens > 0) data.addTokens(finalTokens);
 
         double multi = LevelPlugin.getInstance().getPlayerMultiplier(player);
         double global = LevelPlugin.getInstance().getGlobalBooster();
+        // ADDED: player's personal XP booster
+        double personalXpBooster = LevelPlugin.getInstance().getBoosterManager().getPersonalMultiplier(player, BoosterType.XP);
         double armorMulti = isWearingFullGold(player) ? 1.5 : 1.0;
         
-        int finalXp = (int) Math.round(baseXp * multi * global * armorMulti);
+        int finalXp = (int) Math.round(baseXp * multi * global * personalXpBooster * armorMulti);
 
         data.addXp(finalXp);
         updateBoard(player);

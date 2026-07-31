@@ -38,6 +38,14 @@ commands:
     description: Manage or view the global token booster.
     usage: /tokenboost
     permission: levels.tokenboost.manage
+  givebooster:
+    description: Give a player a personal or global booster to activate from their menu.
+    usage: /givebooster <player> <xp|tokens> <personal|global> <multiplier> <minutes>
+    permission: levels.givebooster
+  boosters:
+    description: Open your booster menu.
+    usage: /boosters
+    aliases: [boostermenu, boostmenu]
 
 permissions:
   levels.multiplier.1:

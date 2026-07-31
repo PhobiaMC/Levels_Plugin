@@ -10,6 +10,9 @@ import org.bukkit.entity.Player;
 
 import com.phobia.levels.LevelPlugin;
 import com.phobia.levels.api.PlayerLevelUpEvent;
+import com.phobia.levels.boosters.ActiveBooster;
+import com.phobia.levels.boosters.Booster;
+import com.phobia.levels.boosters.BoosterType;
 
 public class PlayerData {
 
@@ -24,6 +27,11 @@ public class PlayerData {
     private int bankBalance;
     private int prestige;
     private List<String> badges = new ArrayList<>(); // MOVED: field declaration up with the rest
+
+    // ADDED: booster system
+    private List<Booster> pendingBoosters = new ArrayList<>();
+    private ActiveBooster activePersonalXpBooster;
+    private ActiveBooster activePersonalTokensBooster;
 
     public PlayerData(Player player) {
         this.player = player;
@@ -71,6 +79,29 @@ public class PlayerData {
         // ADDED: Load badge list — getStringList returns empty list if key is absent,
         // so existing player files with no badge entry load cleanly with no errors.
         this.badges = new ArrayList<>(config.getStringList("badges"));
+
+        // ADDED: Load pending boosters
+        this.pendingBoosters = new ArrayList<>();
+        for (String raw : config.getStringList("boosters.pending")) {
+            Booster booster = Booster.deserialize(raw);
+            if (booster != null) {
+                this.pendingBoosters.add(booster);
+            }
+        }
+
+        // ADDED: Load active personal boosters — only restore if not already expired,
+        // since the stored value is an absolute timestamp, not a countdown.
+        this.activePersonalXpBooster = null;
+        ActiveBooster storedXp = ActiveBooster.deserialize(config.getString("boosters.active-xp"));
+        if (storedXp != null && storedXp.isActive()) {
+            this.activePersonalXpBooster = storedXp;
+        }
+
+        this.activePersonalTokensBooster = null;
+        ActiveBooster storedTokens = ActiveBooster.deserialize(config.getString("boosters.active-tokens"));
+        if (storedTokens != null && storedTokens.isActive()) {
+            this.activePersonalTokensBooster = storedTokens;
+        }
     }
 
     public void save(FileConfiguration config) {
@@ -85,6 +116,23 @@ public class PlayerData {
         config.set("prestige", prestige);
         // ADDED: Save badge list — stored as a YAML string list under the "badges" key
         config.set("badges", badges);
+
+        // ADDED: Save pending boosters
+        List<String> pendingSerialized = new ArrayList<>();
+        for (Booster booster : pendingBoosters) {
+            pendingSerialized.add(booster.serialize());
+        }
+        config.set("boosters.pending", pendingSerialized);
+
+        // ADDED: Save active personal boosters — drop them from the file if expired
+        // so we don't keep resurrecting a dead booster on load.
+        config.set("boosters.active-xp",
+                (activePersonalXpBooster != null && activePersonalXpBooster.isActive())
+                        ? activePersonalXpBooster.serialize() : null);
+
+        config.set("boosters.active-tokens",
+                (activePersonalTokensBooster != null && activePersonalTokensBooster.isActive())
+                        ? activePersonalTokensBooster.serialize() : null);
     }
 
     // --- Banking ---
@@ -154,6 +202,33 @@ public class PlayerData {
 
     public boolean removeBadge(String icon) {
         return badges.remove(icon);
+    }
+
+    // --- Booster helpers (ADDED) ---
+
+    public List<Booster> getPendingBoosters() {
+        return pendingBoosters;
+    }
+
+    public Booster findPendingBooster(String id) {
+        for (Booster booster : pendingBoosters) {
+            if (booster.getId().equals(id)) {
+                return booster;
+            }
+        }
+        return null;
+    }
+
+    public ActiveBooster getActivePersonalBooster(BoosterType type) {
+        return type == BoosterType.XP ? activePersonalXpBooster : activePersonalTokensBooster;
+    }
+
+    public void setActivePersonalBooster(BoosterType type, ActiveBooster booster) {
+        if (type == BoosterType.XP) {
+            this.activePersonalXpBooster = booster;
+        } else {
+            this.activePersonalTokensBooster = booster;
+        }
     }
 
     // --- XP / misc ---

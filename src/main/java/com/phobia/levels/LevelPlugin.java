@@ -5,15 +5,20 @@ import java.io.File;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.phobia.levels.boosters.BoosterManager;
+import com.phobia.levels.boosters.BoosterType;
 import com.phobia.levels.commands.BalanceTopCommand;
+import com.phobia.levels.commands.BoosterMenuCommand;
+import com.phobia.levels.commands.GiveBoosterCommand;
 import com.phobia.levels.commands.GiveTokensCommand;
 import com.phobia.levels.commands.GiveXpCommand;
 import com.phobia.levels.commands.LevelCommand;
 import com.phobia.levels.commands.PrestigeCommand;
 import com.phobia.levels.commands.ProfileCommand;
 import com.phobia.levels.commands.TokenAdminCommand;
-import com.phobia.levels.commands.TokenBoostCommand; // New Command Import
-import com.phobia.levels.commands.XpBoostCommand; // New Command Import
+import com.phobia.levels.commands.TokenBoostCommand;
+import com.phobia.levels.commands.XpBoostCommand;
+import com.phobia.levels.gui.BoosterMenuListener;
 import com.phobia.levels.listeners.DeathListener;
 import com.phobia.levels.listeners.KillListener;
 import com.phobia.levels.listeners.PlayerJoinListener;
@@ -29,12 +34,7 @@ public class LevelPlugin extends JavaPlugin {
     private PlayerDataManager playerDataManager;
     private LevelManager levelManager;
     private ScoreboardHandler scoreboardHandler;
-
-    private double globalXpBoost = 1.0;
-    private long boostExpireTime = 0;
-
-    private double globalTokenBoost = 1.0;
-    private long tokenBoostExpireTime = 0;
+    private BoosterManager boosterManager; // ADDED
 
     @Override
     public void onEnable() {
@@ -45,6 +45,7 @@ public class LevelPlugin extends JavaPlugin {
         this.playerDataManager = new PlayerDataManager();
         this.levelManager = new LevelManager();
         this.scoreboardHandler = new ScoreboardHandler();
+        this.boosterManager = new BoosterManager(this); // ADDED — must exist before any command/listener touches it
         BalanceTopCommand balTop = new BalanceTopCommand();
 
         File dataFolder = new File(getDataFolder(), "playerdata");
@@ -53,6 +54,7 @@ public class LevelPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(), this);
         Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(), this);
         Bukkit.getPluginManager().registerEvents(new KillListener(), this);
+        Bukkit.getPluginManager().registerEvents(new BoosterMenuListener(), this); // ADDED
 
         getCommand("level").setExecutor(new LevelCommand());
         getCommand("profile").setExecutor(new ProfileCommand());
@@ -63,25 +65,17 @@ public class LevelPlugin extends JavaPlugin {
         getCommand("tokenadmin").setExecutor(new TokenAdminCommand());
         getCommand("baltop").setExecutor(balTop);
         getCommand("banktop").setExecutor(balTop);
-        getCommand("prestige").setExecutor(new PrestigeCommand()); // Registered /prestige command
+        getCommand("prestige").setExecutor(new PrestigeCommand());
+        getCommand("givebooster").setExecutor(new GiveBoosterCommand()); // ADDED
+        getCommand("boosters").setExecutor(new BoosterMenuCommand()); // ADDED
 
         this.scoreboardHandler.start();
 
         Bukkit.getPluginManager().registerEvents(new DeathListener(), this);
 
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
-            if (boostExpireTime != 0 && System.currentTimeMillis() > boostExpireTime) {
-                globalXpBoost = 1.0;
-                boostExpireTime = 0;
-                Bukkit.broadcastMessage("§eThe global XP boost has ended.");
-            }
-
-            if (tokenBoostExpireTime != 0 && System.currentTimeMillis() > tokenBoostExpireTime) {
-                globalTokenBoost = 1.0;
-                tokenBoostExpireTime = 0;
-                Bukkit.broadcastMessage("§eThe global Token boost has ended.");
-            }
-        }, 20L, 20L);
+        // CHANGED: this timer now just asks BoosterManager to check + broadcast expiry,
+        // instead of holding the multiplier/expiry fields here directly.
+        Bukkit.getScheduler().runTaskTimer(this, boosterManager::tick, 20L, 20L);
 
         Bukkit.getConsoleSender().sendMessage("§a[Levels] Plugin enabled.");
     }
@@ -90,6 +84,7 @@ public class LevelPlugin extends JavaPlugin {
     public void onDisable() {
         if (playerDataManager != null) playerDataManager.saveAll();
         if (scoreboardHandler != null) scoreboardHandler.shutdown();
+        if (boosterManager != null) boosterManager.saveGlobal(); // ADDED, cheap safety net
         Bukkit.getConsoleSender().sendMessage("§c[Levels] Plugin disabled.");
     }
 
@@ -107,6 +102,10 @@ public class LevelPlugin extends JavaPlugin {
 
     public ScoreboardHandler getScoreboardHandler() {
         return scoreboardHandler;
+    }
+
+    public BoosterManager getBoosterManager() { // ADDED
+        return boosterManager;
     }
 
     public double getPlayerMultiplier(org.bukkit.entity.Player p) {
@@ -127,33 +126,31 @@ public class LevelPlugin extends JavaPlugin {
         return highest;
     }
 
+    // CHANGED: these six methods now delegate to BoosterManager instead of
+    // holding their own fields, so PlayerBoard / TokenBoostCommand / XpBoostCommand
+    // don't need to change at all.
+
     public double getGlobalBooster() {
-        return globalXpBoost;
+        return boosterManager.getGlobalMultiplier(BoosterType.XP);
     }
 
     public void setGlobalBooster(double multiplier, int seconds) {
-        this.globalXpBoost = multiplier;
-        this.boostExpireTime = System.currentTimeMillis() + (seconds * 1000L);
+        boosterManager.setGlobalBooster(BoosterType.XP, multiplier, seconds);
     }
 
     public long getBoosterTimeRemaining() {
-        if (boostExpireTime == 0) return 0;
-        long diff = boostExpireTime - System.currentTimeMillis();
-        return Math.max(diff / 1000, 0);
+        return boosterManager.getGlobalRemainingSeconds(BoosterType.XP);
     }
 
     public double getTokenBooster() {
-        return globalTokenBoost;
+        return boosterManager.getGlobalMultiplier(BoosterType.TOKENS);
     }
 
     public void setTokenBooster(double multiplier, int seconds) {
-        this.globalTokenBoost = multiplier;
-        this.tokenBoostExpireTime = System.currentTimeMillis() + (seconds * 1000L);
+        boosterManager.setGlobalBooster(BoosterType.TOKENS, multiplier, seconds);
     }
 
     public long getTokenBoosterTimeRemaining() {
-        if (tokenBoostExpireTime == 0) return 0;
-        long diff = tokenBoostExpireTime - System.currentTimeMillis();
-        return Math.max(diff / 1000, 0);
+        return boosterManager.getGlobalRemainingSeconds(BoosterType.TOKENS);
     }
 }
